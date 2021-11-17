@@ -9,7 +9,7 @@ import java.util.Stack;
  **/
 public class Calculator {
     /** Поле математического выражения */
-    private String Expression;
+    final private String Expression;
 
     /**
      * Конструктор
@@ -21,6 +21,7 @@ public class Calculator {
     /**
      * Функция получения решения выражения
      * @return возвращает решение математического выражение
+     * @throws Exception если выражение введено некорректно
      */
     public double Solution() throws Exception{
         Errors();
@@ -30,6 +31,7 @@ public class Calculator {
     }
     /**
      * Процедура проверки на ошибки введенного выражения
+     * @throws Exception если выражение введено некорректно
      */
     private void Errors() throws Exception{
         int open_parentheses = 0, closing_parentheses = 0, digit_counter = 0;
@@ -112,6 +114,7 @@ public class Calculator {
      * Функция вычисления значения выражения
      * @param RPN - преобразованное с помощью обратной пользовательской нотации математическое выражение
      * @return возвращает вычисленное значение
+     * @throws Exception если происходит деление на ноль
      */
     private double RPNtoAnswer(String RPN) throws Exception{
         String operand = "";
@@ -122,7 +125,6 @@ public class Calculator {
             if (GetPriority(RPN.charAt(i)) == 0){
                 while(RPN.charAt(i) != ' ' && GetPriority(RPN.charAt(i)) == 0){
                     operand += RPN.charAt(i++);
-                    if (i == RPN.length()) break;
                 }
                 Stack.push(Double.parseDouble(operand));
                 operand = "";

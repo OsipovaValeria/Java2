@@ -2,7 +2,6 @@ package com.company;
 
 import org.junit.Assert;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 public class CalculatorTest {
 
@@ -15,7 +14,7 @@ public class CalculatorTest {
             double actual1 = 12;
             Assert.assertEquals(expected1, actual1, 0.00001);
         } catch (Exception exception) {
-            System.out.print(exception);
+            System.out.print(exception.getMessage());
         }
     }
 }
