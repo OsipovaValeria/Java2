@@ -24,41 +24,11 @@ public class Calculator {
      * @throws Exception если выражение введено некорректно
      */
     public double Solution() throws Exception{
-        Errors();
         String PreparingExpression = PreparingExpression();
         String RPN = ExpressionToRPN(PreparingExpression);
         return RPNtoAnswer(RPN);
     }
-    /**
-     * Процедура проверки на ошибки введенного выражения
-     * @throws Exception если выражение введено некорректно
-     */
-    private void Errors() throws Exception{
-        int open_parentheses = 0, closing_parentheses = 0, digit_counter = 0;
-        if (Expression.length() == 0)
-            throw new Exception("Некорректное выражение - вы ввели пустую строку!");
-        if (Expression.charAt(0) == '*' || Expression.charAt(0) == '/')
-            throw new Exception("Некорректное выражение - выражение не может начинаться с этого символа!");
-        if (Expression.charAt(Expression.length() - 1) == '*' || Expression.charAt(Expression.length() - 1) == '/' || Expression.charAt(Expression.length() - 1) == '+' || Expression.charAt(Expression.length() - 1) == '-')
-            throw new Exception("Некорректное выражение - выражение не может заканчиваться на этот символ!");
-        for (int i = 0; i < Expression.length(); i++){
-            char symbol = Expression.charAt(i);
-            if (Character.isDigit(symbol)) digit_counter++;
-            if (symbol == '(') open_parentheses++;
-            if (symbol == ')') closing_parentheses++;
-            if (!Character.isDigit(symbol) && symbol != '+' && symbol != '-' && symbol != '/' && symbol != '*' && symbol != '(' && symbol != ')' && symbol != '.')
-                throw new Exception("Некорректное выражение - используются недопустимые символы!");
-            if (i < Expression.length() - 1) {
-                char next_symbol = Expression.charAt(i + 1);
-                if ((symbol == '+' || symbol == '-' || symbol == '*' || symbol == '/') && (!Character.isDigit(next_symbol) && next_symbol != '('))
-                    throw new Exception("Некорректное выражение - возможно пропущенно число!");
-                if (symbol == '(' && next_symbol == ')')
-                    throw new Exception("Некорректное выражение - отсутствует выражение в скобках!");
-            }
-        }
-        if (digit_counter == Expression.length()) throw new Exception("Выражение состоит из одного числа!");
-        if (open_parentheses != closing_parentheses) throw new Exception("Некорректное выражение - количество '(' не равно ')'!");
-    }
+
     /**
      * Функция подготовки выражения для вычисления
      * @return возвращает исправленное выражение
@@ -77,20 +47,29 @@ public class Calculator {
         }
         return PreparingExpression;
     }
+
     /**
      * Функция преобразования выражения с помощью обратной пользовательской нотации
      * @param PreparingExpression -  подготовленное математическое выражение
      * @return возвращает преобразованное выражение
+     * @throws Exception если используются недопустимые символы
+     * @throws Exception если пропущен знак операции
+     * @throws Exception если отсутсвуют необходимые скобки
      */
-    private String ExpressionToRPN(String PreparingExpression){
-        String current = ""; //текущая строка
-        Stack<Character> Stack = new Stack<>(); //стэк
-
-        int priority;
+    private String ExpressionToRPN(String PreparingExpression) throws Exception{
+        String current = "";
+        Stack<Character> Stack = new Stack<>();
+        int open_parentheses = 0, closing_parentheses = 0;
         for(int i = 0; i < PreparingExpression.length(); i++){
-            priority = GetPriority(PreparingExpression.charAt(i));
-            if (priority == 0)  current += PreparingExpression.charAt(i);
-            if (priority == 1) Stack.push(PreparingExpression.charAt(i));
+            char symbol = PreparingExpression.charAt(i);
+            if (!Character.isDigit(symbol) && symbol != '+' && symbol != '-' && symbol != '/' && symbol != '*' && symbol != '(' && symbol != ')' && symbol != '.')
+                throw new Exception("Некорректное выражение - используются недопустимые символы! Позиция ошибки: " + i);
+            int priority = GetPriority(symbol);
+            if (priority == 0)  current += symbol;
+            if (priority == 1) {
+                open_parentheses++;
+                Stack.push(symbol);
+            }
             if (priority == 2 || priority == 3){
                 current += ' ';
                 while(!Stack.empty()){
@@ -98,15 +77,22 @@ public class Calculator {
                         current += Stack.pop();
                     else break;
                 }
-                Stack.push(PreparingExpression.charAt(i));
+                Stack.push(symbol);
             }
-            if (priority == -1){
+            if (priority == -1) {
+                closing_parentheses++;
+                if (i < Expression.length() - 1 && Character.isDigit(Expression.charAt(i + 1)))
+                    throw new Exception("Некорректное выражение - пропущен знак операции! Позиция ошибки: " + i);
                 current += ' ';
-                while (GetPriority(Stack.peek()) != 1)
+                while (!Stack.empty() && GetPriority(Stack.peek()) != 1)
                     current += Stack.pop();
+                if (Stack.empty())
+                    throw new Exception("Некорректное выражение - отсутсвует открывающая скобка! Позиция ошибки: " + i);
                 Stack.pop();
             }
         }
+        if (open_parentheses != closing_parentheses)
+            throw new Exception("Некорректное выражение - количество '(' не равно ')'!");
         while (!Stack.empty()) current += Stack.pop();
         return current;
     }
@@ -114,7 +100,9 @@ public class Calculator {
      * Функция вычисления значения выражения
      * @param RPN - преобразованное с помощью обратной пользовательской нотации математическое выражение
      * @return возвращает вычисленное значение
+     * @throws Exception если в выражении недостаточно чисел
      * @throws Exception если происходит деление на ноль
+     * @throws Exception если введена пустая строка или пустые скобки
      */
     private double RPNtoAnswer(String RPN) throws Exception{
         String operand = "";
@@ -123,14 +111,16 @@ public class Calculator {
         for(int i = 0; i < RPN.length(); i++){
             if (RPN.charAt(i) == ' ') continue;
             if (GetPriority(RPN.charAt(i)) == 0){
-                while(RPN.charAt(i) != ' ' && GetPriority(RPN.charAt(i)) == 0){
+                while(i < RPN.length() && RPN.charAt(i) != ' ' && GetPriority(RPN.charAt(i)) == 0)
                     operand += RPN.charAt(i++);
-                }
                 Stack.push(Double.parseDouble(operand));
                 operand = "";
             }
-            if (GetPriority(RPN.charAt(i)) == 2 || GetPriority(RPN.charAt(i)) == 3){
-                double a = Stack.pop(), b = Stack.pop();
+            if (i < RPN.length() && (GetPriority(RPN.charAt(i)) == 2 || GetPriority(RPN.charAt(i)) == 3)){
+                if (Stack.empty()) throw new Exception("Некорректное выражение - в выражении недостаточно чисел!");
+                double a = Stack.pop();
+                if (Stack.empty()) throw new Exception("Некорректное выражение - в выражении недостаточно чисел!");
+                double b = Stack.pop();
                 if (RPN.charAt(i) == '+') Stack.push(b + a);
                 if (RPN.charAt(i) == '-') Stack.push(b - a);
                 if (RPN.charAt(i) == '*') Stack.push(b * a);
@@ -140,6 +130,7 @@ public class Calculator {
                 }
             }
         }
+        if (Stack.empty()) throw new Exception("Некорректное выражение - введена пустая строка или пустые скобки!");
         return Stack.pop();
     }
     /**
